@@ -5,8 +5,12 @@ Created on Sat Jan 10 14:43:16 2015
 @author: rkmaddox
 """
 
-import numpy.fft.fftpack as fft
+#import scipy.fftpack as fft
+#from scikits.cuda import fft
+#import pyfftw.interfaces.numpy_fft as fft
+import mne.cuda as fft
 import numpy as np
+#from scikits.cuda.linalg import pinv as pinv_cuda  # need to install cula
 
 
 def cross_correlation(x, y):
@@ -39,7 +43,7 @@ def make_xxt(ac):
     return xxt
 
 
-def trf_corr(x_in, x_out, fs, t_start, t_stop):
+def trf_corr(x_in, x_out, fs, t_start, t_stop, x_in_freq=False):
     trf_start_ind = int(np.floor(t_start * fs))
     trf_stop_ind = int(np.floor(t_stop * fs))
     trf_inds = np.arange(trf_start_ind, trf_stop_ind + 1, dtype=int)
@@ -48,8 +52,18 @@ def trf_corr(x_in, x_out, fs, t_start, t_stop):
     n_ch_in, len_sig = x_in.shape
     n_ch_out = x_out.shape[0]
 
-    x_in_fft = fft_pow2(x_in, x_in.shape[-1] + len_trf - 1)
-    x_out_fft = fft_pow2(x_out, x_out.shape[-1] + len_trf - 1)
+    if t_stop <= t_start:
+        raise ValueError("t_stop must be after t_start")
+
+    if not x_in_freq:
+        x_in_fft = fft_pow2(x_in, x_in.shape[-1] + len_trf - 1)
+        x_out_fft = fft_pow2(x_out, x_out.shape[-1] + len_trf - 1)
+    else:
+        if x_out.shape[1] > len_sig:
+            raise ValueError("If x_in is in frequency domain, it must be "
+                             "longer than x_out.")
+        x_in_fft = x_in
+        x_out_fft = fft.fft(x_out, len_sig)
 
     # compute the autocorrelations
     ac = np.zeros((n_ch_in, n_ch_in, len_trf * 2 - 1))
@@ -66,8 +80,11 @@ def trf_corr(x_in, x_out, fs, t_start, t_stop):
         for ch_out in range(n_ch_out):
             cc_temp = np.real(fft.ifft(x_out_fft[ch_out] *
                               np.conj(x_in_fft[ch_in])))
-            cc[ch_out, ch_in] = np.append(cc_temp[trf_start_ind:],
-                                          cc_temp[:trf_stop_ind + 1])
+            if trf_start_ind < 0 and trf_stop_ind + 1 > 0:
+                cc[ch_out, ch_in] = np.append(cc_temp[trf_start_ind:],
+                                              cc_temp[:trf_stop_ind + 1])
+            else:
+                cc[ch_out, ch_in] = cc_temp[trf_start_ind:trf_stop_ind + 1]
 
     # make xxt and xy
     xxt = make_xxt(ac) / len_sig

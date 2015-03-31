@@ -23,7 +23,7 @@ n_ch_out = 5  # e.g., number of electrodes out
 len_sig = fs * 120
 
 # trf parameters
-trf_start = -100e-3
+trf_start = -100e-3  # -100e-3
 trf_stop = 300e-3
 
 # make the signals with some correlations
