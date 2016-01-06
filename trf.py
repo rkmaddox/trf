@@ -11,7 +11,7 @@ try:  # Try to use CUDA fft
 except:
     from scipy.fftpack import fft, ifft
 try:  # Try to use CUDA pseudoinverse
-    from scikits.cuda import linalg
+    from skcuda import linalg
     linalg.init()
     from pycuda import gpuarray
     use_cuda_pinv = True
