@@ -1,3 +1,5 @@
+This code has been improved and absorbed into the mne-python project. You should use the code there. This repo is obsolete.
+
 This software is provided under the BSD 3-clause license.
 
 Copyright © 2015-2016, Ross Maddox
